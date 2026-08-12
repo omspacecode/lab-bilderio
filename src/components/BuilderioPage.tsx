@@ -1,33 +1,35 @@
-import { type BuilderContent, Content, fetchOneEntry, isPreviewing } from '@builder.io/sdk-react';
-import { useEffect, useState } from 'react';
-import { customComponents } from './builderio-custom-components';
+import { type BuilderContent, Content, fetchOneEntry } from "@builder.io/sdk-react";
+import { useEffect, useState } from "react";
 
-const builderAPIpublicKey = "695b5927986f48709c8c9f221b055aa4";
+interface BuilderioPageProps {
+  id: string;
+  content: BuilderContent | null;
+  model: string;
+  publicApiKey: string;
+  apiLocale: string;
+}
 
-function BuilderioPage({ id, builderioLocale }: { id: string; builderioLocale: string }) {
-  const [content, setContent] = useState<BuilderContent | null>(null);
+function BuilderioPage({ id, model, publicApiKey, apiLocale, content }: Readonly<BuilderioPageProps>) {
+  const [contentToRender, setContentToRender] = useState<BuilderContent | null>(content);
 
   useEffect(() => {
-    fetchOneEntry({
-      model: 'page',
-      apiKey: builderAPIpublicKey,
-      query: {
-        id,
-      },
-      locale: builderioLocale,
-    }).then((content) => {
-      console.log('Fetched content:', content);
-      setContent(content);
-    });
-  }, []);
+    const fetchData = async () => {
+      const content = await fetchOneEntry({
+        model: model,
+        apiKey: publicApiKey,
+        query: {
+          id,
+        },
+        locale: apiLocale,
+      });
 
-  const shouldRenderBuilderContent = content ?? isPreviewing();
+      if (content) setContentToRender(content);
+    };
 
-  return shouldRenderBuilderContent ? (
-    <Content content={content} model="page" apiKey={builderAPIpublicKey} customComponents={customComponents} />
-  ) : (
-    <div>Content Not Found</div>
-  );
+    fetchData().catch(console.error);
+  }, [id, model, publicApiKey, apiLocale]);
+
+  return <Content content={contentToRender} model={model} apiKey={publicApiKey} locale={apiLocale} />;
 }
 
 export default BuilderioPage;

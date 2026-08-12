@@ -1,9 +1,19 @@
 ---
+import {
+  fetchEntries,
+  fetchOneEntry,
+  type BuilderContent,
+} from "@builder.io/sdk-react";
+import { initializeNodeRuntime } from "@builder.io/sdk-react/node/init";
+
 import BuilderioPage from "../../components/BuilderioPage";
 import Layout from "../../layouts/Layout.astro";
 
 export async function getStaticPaths() {
-  const builderModel = import.meta.env.BUILDER_PAGE_MODEL;
+  // @see https://www.builder.io/c/docs/integration-tips#enable-data-bindings-in-node-environments
+  initializeNodeRuntime();
+
+  const builderModel = "page";
   const builderAPIpublicKey = import.meta.env.BUILDER_API_PUBLIC_KEY;
 
   const builderioToUrlLanguageMapping: Record<string, string> = {
@@ -12,64 +22,79 @@ export async function getStaticPaths() {
     "ja-JP": "ja",
   };
 
-  const contentFetchUrl = `https://cdn.builder.io/api/v3/content/${builderModel}?${new URLSearchParams(
-    {
-      apiKey: builderAPIpublicKey,
-      fields: ["id", "data.slug", "data.title"].join(","),
-      cachebust: "true",
-    },
-  ).toString()}`;
+  const pages: BuilderContent[] = await fetchEntries({
+    model: builderModel,
+    apiKey: builderAPIpublicKey,
+    fields: ["id", "name", "data.slug", "data.title", "data.description"].join(
+      ",",
+    ),
+  });
 
-  const { results: pages } = await fetch(contentFetchUrl)
-    .then((res) => res.json())
-    .catch((error) => {
-      console.error("Error fetching pages from Builder.io:", error);
-      return { results: [] };
-    });
+  const paths = pages.flatMap((page: BuilderContent) => {
+    const defaultSlug = page.data?.slug["Default"];
 
-  const paths = pages.flatMap(
-    ({
-      id,
-      data: { slug, title },
-    }: {
-      id: string;
-      data: { slug: Record<string, string>; title: string };
-    }) => {
-      const defaultSlug = slug["Default"];
+    return Object.entries(page.data?.slug || {}).map(
+      ([builderioLocale, url]: [string, string]) => {
+        const urlLang = builderioToUrlLanguageMapping[builderioLocale];
 
-      return Object.entries(slug).map(
-        ([builderioLocale, url]: [string, string]) => {
-          const urlLang = builderioToUrlLanguageMapping[builderioLocale];
+        const title = (page.data?.title as unknown as Record<string, string>)?.[
+          builderioLocale
+        ];
+        const description = page.data?.description?.[builderioLocale];
 
-          if (!urlLang) {
-            console.warn(
-              `No language mapping found for Builder.io locale "${builderioLocale}". Skipping page with slug "${url}".`,
-            );
-            return null;
-          }
+        if (!urlLang) {
+          return null;
+        }
 
-          const hasCustomSlug = url.trim().length > 0;
+        const hasCustomSlug = url.trim().length > 0;
 
-          return {
-            params: {
-              lang: urlLang,
-              slug: hasCustomSlug ? url : defaultSlug,
-            },
-            props: { title, id, contentLang: builderioLocale },
-          };
-        },
-      );
-    },
-  );
+        return {
+          params: {
+            lang: urlLang,
+            slug: hasCustomSlug ? url : defaultSlug,
+          },
+          props: {
+            id: page.id,
+            title,
+            description,
+            contentLang: builderioLocale,
+          },
+        };
+      },
+    );
+  });
 
-  console.log("paths", paths);
-
+  console.log("Generated paths for static generation:", paths.filter(Boolean));
   return paths.filter(Boolean);
 }
 
-const { title, id, builderioLocale } = Astro.props;
+const builderModel = "page";
+const builderApiPublicKey = import.meta.env.BUILDER_API_PUBLIC_KEY;
+
+const { id, title, description, contentLang } = Astro.props;
+console.log("builderApiPublicKey", builderApiPublicKey);
+
+const content = await fetchOneEntry({
+  model: builderModel,
+  apiKey: builderApiPublicKey,
+  query: {
+    id,
+  },
+  locale: contentLang,
+});
 ---
 
-<Layout title={title}>
-  <BuilderioPage client:load id={id} builderioLocale={builderioLocale} />
+<Layout title={title} description={description}>
+  {
+    id && (
+      <BuilderioPage
+        client:load
+        id={id}
+        model={builderModel}
+        publicApiKey={builderApiPublicKey}
+        apiLocale={contentLang}
+        content={content}
+      />
+    )
+  }
 </Layout>
