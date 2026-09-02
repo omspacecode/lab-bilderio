@@ -1,4 +1,4 @@
-import { type BuilderContent, Content, fetchOneEntry } from "@builder.io/sdk-react";
+import { type BuilderContent, Content, fetchOneEntry, setClientUserAttributes } from "@builder.io/sdk-react";
 import { useEffect, useState } from "react";
 
 interface BuilderioPageProps {
@@ -10,9 +10,13 @@ interface BuilderioPageProps {
 }
 
 function BuilderioPage({ id, model, publicApiKey, apiLocale, content }: Readonly<BuilderioPageProps>) {
+  setClientUserAttributes({ locale: apiLocale });
+
   const [contentToRender, setContentToRender] = useState<BuilderContent | null>(content);
 
   useEffect(() => {
+    setClientUserAttributes({ locale: apiLocale });
+
     const fetchData = async () => {
       const content = await fetchOneEntry({
         model: model,
