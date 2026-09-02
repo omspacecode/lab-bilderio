@@ -32,7 +32,7 @@ export async function getStaticPaths() {
   });
 
   const paths = pages.flatMap((page: BuilderContent) => {
-    const defaultSlug = page.data?.slug["Default"];
+    const defaultSlug = page.data?.slug?.["Default"];
 
     return Object.entries(page.data?.slug || {}).map(
       ([builderioLocale, url]: [string, string]) => {
