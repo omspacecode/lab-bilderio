@@ -26,6 +26,8 @@ export async function getStaticPaths() {
   const pages: BuilderContent[] = await fetchEntries({
     model: builderModel,
     apiKey: builderAPIpublicKey,
+    includeUnpublished: true,
+    options: { cachebust: true },
     fields: ["id", "name", "data.slug", "data.title", "data.description"].join(
       ",",
     ),
@@ -78,6 +80,8 @@ console.log("builderApiPublicKey", builderApiPublicKey);
 const content = await fetchOneEntry({
   model: builderModel,
   apiKey: builderApiPublicKey,
+  includeUnpublished: true,
+  options: { cachebust: true },
   query: {
     id,
   },

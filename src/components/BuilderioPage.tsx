@@ -21,6 +21,8 @@ function BuilderioPage({ id, model, publicApiKey, apiLocale, content }: Readonly
       const content = await fetchOneEntry({
         model: model,
         apiKey: publicApiKey,
+        includeUnpublished: true,
+        options: { cachebust: true },
         query: {
           id,
         },
