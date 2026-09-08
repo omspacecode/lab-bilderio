@@ -20,18 +20,21 @@ export async function getStaticPaths() {
     "en-US": "en",
     "es-ES": "es",
     "ja-JP": "ja",
+    "ar-SA": "ar",
   };
 
   const pages: BuilderContent[] = await fetchEntries({
     model: builderModel,
     apiKey: builderAPIpublicKey,
+    includeUnpublished: true,
+    options: { cachebust: true },
     fields: ["id", "name", "data.slug", "data.title", "data.description"].join(
       ",",
     ),
   });
 
   const paths = pages.flatMap((page: BuilderContent) => {
-    const defaultSlug = page.data?.slug["Default"];
+    const defaultSlug = page.data?.slug?.["Default"];
 
     return Object.entries(page.data?.slug || {}).map(
       ([builderioLocale, url]: [string, string]) => {
@@ -77,6 +80,8 @@ console.log("builderApiPublicKey", builderApiPublicKey);
 const content = await fetchOneEntry({
   model: builderModel,
   apiKey: builderApiPublicKey,
+  includeUnpublished: true,
+  options: { cachebust: true },
   query: {
     id,
   },
